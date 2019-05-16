@@ -45,6 +45,8 @@ flags.DEFINE_string("local_dir", None,
                           "track.autodetect.dfl_local_dir")
 flags.DEFINE_string("remote_dir", None,
                           "the remote directory where trials are stored")
+flags.DEFINE_list("sort", "", "sort by (ascending)")
+flags.DEFINE_list("rsort", "", "sort by (descending)")
 
 def compare(c, l, r):
     if c == '=':
@@ -83,11 +85,29 @@ def _main(argv):
             cols.append(col)
             lit = _parse_pandas(lit)
             df = df[compare(c, df[col], lit)]
-    df = df.sort_values("start_time", ascending=False)
+
     # just the flags
     df["invocation"] = df["invocation"].map(_drop_first_two_words)
     if not cols:
         cols = ["trial_id", "start_time", "git_pretty"]
+
+    # if requested to sort by a col but col not present in requested
+    # cols, add it
+    sort_cols = flags.FLAGS.sort
+    rsort_cols = flags.FLAGS.rsort
+    for col in sort_cols + rsort_cols:
+        if col not in cols:
+            cols.append(col)
+
+    # sort
+    # bad design here, since you can't interleave ascending and
+    # descending sorts. But oh well
+    ascending = [True] * len(sort_cols) + [False] * len(rsort_cols)
+    print(sort_cols)
+    print(rsort_cols)
+    print(ascending)
+    df = df.sort_values(sort_cols + rsort_cols, ascending=ascending)
+
     print(df[cols].to_string(
         index=False, justify='left',
         formatters={x: formatter for x in dt_cols}))
