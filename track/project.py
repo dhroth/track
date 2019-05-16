@@ -93,13 +93,31 @@ class Project(object):
 
     def _load_metadata(self):
         metadata_folder = os.path.join(self.log_dir, constants.METADATA_FOLDER)
-        rows = []
+        param_maps = {}
+        bleus = {}
         for trial_file in os.listdir(metadata_folder):
-            if not trial_file.endswith(constants.CONFIG_SUFFIX):
-                continue
+            trial_id = trial_file.split("_")[0]
             trial_file = os.path.join(metadata_folder, trial_file)
-            rows.append(pd.read_json(trial_file, typ='frame', lines=True))
-        return pd.concat(rows, axis=0, ignore_index=True, sort=False)
+            if trial_file.endswith(constants.CONFIG_SUFFIX):
+                param_maps[trial_id] = pd.read_json(trial_file,
+                                                    typ='frame',
+                                                    lines=True)
+                # avoid treating trial_id as a float and then printing
+                # inf if it happens to start with 1e
+                param_maps[trial_id]["trial_id"] = trial_id
+            elif trial_file.endswith(constants.BLEU_SUFFIX):
+                with open(trial_file, "r") as bleu_file:
+                    # the bleu file looks like:
+                    # BLEU = 23.96, 56.2/31.1/19.9/13.2...
+                    # and we want 23.96
+                    bleu = float(bleu_file.read().split()[2][:-1])
+                    bleus[trial_id] = bleu
+        for trial_id in param_maps:
+            if trial_id in bleus:
+                param_maps[trial_id]["bleu"] = bleus[trial_id]
+
+        rows = pd.concat(param_maps, axis=0, ignore_index=True, sort=False)
+        return rows
 
 def _remote_to_local_sync(remote, local):
     # TODO: at some point look up whether sync will clobber newer

@@ -21,4 +21,5 @@ import os
 METADATA_FOLDER = "trials"
 CONFIG_SUFFIX = "param_map.json"
 RESULT_SUFFIX = "result.json"
+BLEU_SUFFIX = "bleu60000.txt"
 DFL_DIR_PARENT = os.path.join("~", "track")
